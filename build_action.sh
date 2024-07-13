@@ -1,40 +1,37 @@
 #!/usr/bin/env bash
 
-VERSION=$(grep 'Kernel Configuration' < config | awk '{print $3}')
+# Extract kernel version from config file
+VERSION=$(awk '/Kernel Configuration/ {print $3}' config)
 
-# add deb-src to sources.list
-sed -i "/deb-src/s/# //g" /etc/apt/sources.list
+# Add deb-src to sources.list
+sed -i '/deb-src/s/^# //' /etc/apt/sources.list
 
-# install dep
-apt update
-apt install -y wget xz-utils make gcc flex bison dpkg-dev bc rsync kmod cpio libssl-dev git wget lsb-release
-apt build-dep -y linux
+# Install dependencies
+apt update && apt full-upgrade -y
+apt install -y wget xz-utils make gcc flex bison dpkg-dev bc rsync kmod cpio libssl-dev git lsb-release
 
-# change dir to workplace
+# Change to workspace directory
 cd "${GITHUB_WORKSPACE}" || exit
 
-# download kernel source
-wget http://www.kernel.org/pub/linux/kernel/v6.x/linux-"$VERSION".tar.xz
-tar -xf linux-"$VERSION".tar.xz
-cd linux-"$VERSION"|| exit
+# Download kernel source
+wget "http://www.kernel.org/pub/linux/kernel/v6.x/linux-${VERSION}.tar.xz" && tar -xf "linux-${VERSION}.tar.xz"
+cd "linux-${VERSION}" || exit
 
-# copy config file
+# Copy config file
 cp ../config .config
-git init
 
-# disable DEBUG_INFO to speedup build
-scripts/config --disable DEBUG_INFO
+# Disable DEBUG_INFO to speed up build
+make mrproper && scripts/config --disable DEBUG_INFO
 
-# apply patches
-# shellcheck source=src/util.sh
-# source ../patch.d/*.sh
+# Apply patches (uncomment if needed)
+# for patch in ../patch.d/*.sh; do source "$patch"; done
 
-# build deb packages
+# Build deb packages
 CPU_CORES=$(($(grep -c processor < /proc/cpuinfo)*2))
-make deb-pkg -j"$CPU_CORES"
+make deb-pkg -j"${CPU_CORES}"
 
-# move deb packages to artifact dir
+# Move deb packages to artifact dir
 cd ..
-rm -rfv *dbg*.deb
-mkdir "artifact"
+mkdir -p artifact
 mv ./*.deb artifact/
+rm -rfv *dbg*.deb
