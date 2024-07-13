@@ -7,7 +7,7 @@ sed -i "/deb-src/s/# //g" /etc/apt/sources.list
 
 # install dep
 apt update
-apt install -y wget xz-utils make gcc flex bison dpkg-dev bc rsync kmod cpio libssl-dev git wget
+apt install -y wget xz-utils make gcc flex bison dpkg-dev bc rsync kmod cpio libssl-dev git wget lsb-release
 apt build-dep -y linux
 
 # change dir to workplace
@@ -16,10 +16,11 @@ cd "${GITHUB_WORKSPACE}" || exit
 # download kernel source
 wget http://www.kernel.org/pub/linux/kernel/v6.x/linux-"$VERSION".tar.xz
 tar -xf linux-"$VERSION".tar.xz
-cd linux-"$VERSION" || exit
+cd linux-"$VERSION"|| exit
 
 # copy config file
 cp ../config .config
+git init
 
 # disable DEBUG_INFO to speedup build
 scripts/config --disable DEBUG_INFO
